@@ -1,0 +1,442 @@
+{
+  "name": "as3smi",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "framer-motion": "^11.0.0",
+    "lucide-react": "^0.344.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.2",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.4",
+    "vite": "^5.4.1"
+  }
+}
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  server: { port: 5173 },
+  base: "./",
+})
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ["./index.html", "./src/**/*.{js,jsx}"],
+  theme: {
+    extend: {
+      colors: {
+        primary: "#ff0000",
+        dark: "#000000",
+        light: "#ffffff"
+      },
+      fontFamily: {
+        arabic: ['"Amiri"', 'serif']
+      }
+    },
+  },
+  plugins: [],
+}
+export default {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+}
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#ff0000" />
+    <title>اعصسمي - As3smi</title>
+  </head>
+  <body class="bg-dark text-light font-arabic">
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("/serviceWorker.js");
+        });
+      }
+    </script>
+  </body>
+</html>
+{
+  "name": "اعصسمي - As3smi",
+  "short_name": "As3smi",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#ff0000",
+  "orientation": "portrait",
+  "description": "لعبة تحدي جماعية تربط الصور بالحكم والكلمات.",
+  "icons": [
+    {
+      "src": "/src/assets/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/src/assets/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
+const CACHE_NAME = "as3smi-cache-v1";
+const urlsToCache = ["/", "/index.html", "/manifest.json"];
+
+self.addEventListener("install", event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => {
+      return cache.addAll(urlsToCache);
+    })
+  );
+});
+
+self.addEventListener("fetch", event => {
+  event.respondWith(
+    caches.match(event.request).then(response => {
+      return response || fetch(event.request);
+    })
+  );
+});
+
+self.addEventListener("activate", event => {
+  const cacheWhitelist = [CACHE_NAME];
+  event.waitUntil(
+    caches.keys().then(cacheNames => {
+      return Promise.all(
+        cacheNames.map(name => {
+          if (!cacheWhitelist.includes(name)) {
+            return caches.delete(name);
+          }
+        })
+      );
+    })
+  );
+});
+src/
+├── main.jsx
+├── App.jsx
+├── index.css
+├── context/
+│   └── GameContext.jsx
+├── pages/
+│   ├── Home.jsx
+│   ├── Settings.jsx
+│   ├── Game.jsx
+│   ├── Results.jsx
+│   └── Categories.jsx
+└── components/
+    ├── Header.jsx
+    ├── PlayerCard.jsx
+    └── SoundToggle.jsx
+    import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App";
+import "./index.css";
+
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+import React, { useState } from "react";
+import { motion } from "framer-motion";
+import { GameProvider } from "./context/GameContext";
+import Home from "./pages/Home";
+import Game from "./pages/Game";
+import Settings from "./pages/Settings";
+import Results from "./pages/Results";
+import Categories from "./pages/Categories";
+
+export default function App() {
+  const [page, setPage] = useState("home");
+
+  const renderPage = () => {
+    switch (page) {
+      case "home": return <Home setPage={setPage} />;
+      case "categories": return <Categories setPage={setPage} />;
+      case "game": return <Game setPage={setPage} />;
+      case "results": return <Results setPage={setPage} />;
+      case "settings": return <Settings setPage={setPage} />;
+      default: return <Home setPage={setPage} />;
+    }
+  };
+
+  return (
+    <GameProvider>
+      <motion.div
+        className="min-h-screen bg-dark text-light flex items-center justify-center"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
+        {renderPage()}
+      </motion.div>
+    </GameProvider>
+  );
+}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: "Amiri", serif;
+}
+
+button {
+  @apply bg-primary text-light text-lg rounded-2xl px-6 py-3 m-2 shadow-lg hover:bg-light hover:text-dark transition-all;
+}
+import React, { createContext, useState, useEffect } from "react";
+
+export const GameContext = createContext();
+
+export const GameProvider = ({ children }) => {
+  const [language, setLanguage] = useState("ar");
+  const [score, setScore] = useState(0);
+  const [teamNames, setTeamNames] = useState(["الفريق 1", "الفريق 2"]);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+
+  useEffect(() => {
+    const saved = JSON.parse(localStorage.getItem("as3smi-data"));
+    if (saved) {
+      setLanguage(saved.language);
+      setScore(saved.score);
+      setTeamNames(saved.teamNames);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("as3smi-data", JSON.stringify({ language, score, teamNames }));
+  }, [language, score, teamNames]);
+
+  return (
+    <GameContext.Provider
+      value={{ language, setLanguage, score, setScore, teamNames, setTeamNames, soundEnabled, setSoundEnabled }}
+    >
+      {children}
+    </GameContext.Provider>
+  );
+};
+
+import React, { useContext, useEffect } from "react";
+import { GameContext } from "../context/GameContext";
+import { motion } from "framer-motion";
+import logo from "../assets/logo.png";
+import bgMusic from "../assets/music/bg.mp3";
+
+export default function Home({ setPage }) {
+  const { language, soundEnabled } = useContext(GameContext);
+
+  useEffect(() => {
+    if (soundEnabled) {
+      const audio = new Audio(bgMusic);
+      audio.loop = true;
+      audio.volume = 0.3;
+      audio.play();
+      return () => audio.pause();
+    }
+  }, [soundEnabled]);
+
+  const t = {
+    ar: { start: "ابدأ اللعبة", settings: "الإعدادات", cats: "الأصناف" },
+    en: { start: "Start Game", settings: "Settings", cats: "Categories" }
+  }[language];
+
+  return (
+    <motion.div className="flex flex-col items-center justify-center text-center">
+      <img src={logo} alt="logo" className="w-40 mb-6" />
+      <h1 className="text-3xl font-bold mb-4 text-primary">اعصسمي - As3smi</h1>
+      <button onClick={() => setPage("categories")}>{t.start}</button>
+      <button onClick={() => setPage("settings")}>{t.settings}</button>
+    </motion.div>
+  );
+}
+import React from "react";
+
+export default function Categories({ setPage }) {
+  const categories = ["حكم", "حيوانات", "شركات سيارات", "لاعبين كرة قدم", "أندية", "تكملة كلمة"];
+
+  return (
+    <div className="text-center">
+      <h2 className="text-2xl mb-4 text-primary font-bold">اختر الصنف</h2>
+      {categories.map((cat, i) => (
+        <button key={i} onClick={() => setPage("game")}>{cat}</button>
+      ))}
+      <button onClick={() => setPage("home")}>رجوع</button>
+    </div>
+  );
+}
+import React, { useContext, useState } from "react";
+import { GameContext } from "../context/GameContext";
+import correctSound from "../assets/sounds/correct.mp3";
+import wrongSound from "../assets/sounds/wrong.mp3";
+
+export default function Game({ setPage }) {
+  const { score, setScore, soundEnabled } = useContext(GameContext);
+  const [question, setQuestion] = useState("ما الكلمة المشتركة بين هذه الصور؟");
+  const [answer, setAnswer] = useState("");
+  const [feedback, setFeedback] = useState("");
+
+  const handleSubmit = () => {
+    if (answer.trim() === "عراق") {
+      setFeedback("✅ إجابة صحيحة!");
+      setScore(score + 1);
+      if (soundEnabled) new Audio(correctSound).play();
+    } else {
+      setFeedback("❌ إجابة خاطئة!");
+      if (soundEnabled) new Audio(wrongSound).play();
+    }
+  };
+
+  return (
+    <div className="text-center">
+      <h2 className="text-2xl text-primary mb-4">التحدي</h2>
+      <p>{question}</p>
+      <input
+        type="text"
+        value={answer}
+        onChange={(e) => setAnswer(e.target.value)}
+        className="text-dark rounded-lg px-4 py-2 m-2"
+        placeholder="اكتب الإجابة..."
+      />
+      <div>
+        <button onClick={handleSubmit}>تحقق</button>
+        <button onClick={() => setPage("results")}>إنهاء</button>
+      </div>
+      <p className="mt-3">{feedback}</p>
+    </div>
+  );
+}
+import React, { useContext } from "react";
+import { GameContext } from "../context/GameContext";
+
+export default function Results({ setPage }) {
+  const { score, teamNames } = useContext(GameContext);
+
+  return (
+    <div className="text-center">
+      <h2 className="text-3xl text-primary mb-4">🏆 النتائج</h2>
+      <p className="text-xl mb-3">{teamNames[0]}: {score} نقطة</p>
+      <button onClick={() => setPage("home")}>الرجوع للرئيسية</button>
+    </div>
+  );
+}
+import React, { useContext } from "react";
+import { GameContext } from "../context/GameContext";
+import SoundToggle from "../components/SoundToggle";
+
+export default function Settings({ setPage }) {
+  const { language, setLanguage, teamNames, setTeamNames } = useContext(GameContext);
+
+  return (
+    <div className="text-center">
+      <h2 className="text-3xl text-primary mb-4">⚙️ الإعدادات</h2>
+
+      <div className="mb-4">
+        <label>اللغة:</label>
+        <select
+          className="text-dark px-4 py-2 rounded-lg m-2"
+          value={language}
+          onChange={(e) => setLanguage(e.target.value)}
+        >
+          <option value="ar">العربية</option>
+          <option value="en">English</option>
+        </select>
+      </div>
+
+      <div>
+        <label>اسم الفريق 1:</label>
+        <input
+          className="text-dark rounded-lg px-4 py-2 m-2"
+          value={teamNames[0]}
+          onChange={(e) => setTeamNames([e.target.value, teamNames[1]])}
+        />
+      </div>
+
+      <div>
+        <label>اسم الفريق 2:</label>
+        <input
+          className="text-dark rounded-lg px-4 py-2 m-2"
+          value={teamNames[1]}
+          onChange={(e) => setTeamNames([teamNames[0], e.target.value])}
+        />
+      </div>
+
+      <SoundToggle />
+
+      <button onClick={() => setPage("home")}>رجوع</button>
+    </div>
+  );
+}
+import React from "react";
+
+export default function PlayerCard({ name, score }) {
+  return (
+    <div className="bg-light text-dark rounded-2xl p-4 m-2 shadow-lg w-40">
+      <h3 className="font-bold">{name}</h3>
+      <p>{score} 🏅</p>
+    </div>
+  );
+}
+import React, { useContext } from "react";
+import { GameContext } from "../context/GameContext";
+import { Volume2, VolumeX } from "lucide-react";
+
+export default function SoundToggle() {
+  const { soundEnabled, setSoundEnabled } = useContext(GameContext);
+
+  return (
+    <button onClick={() => setSoundEnabled(!soundEnabled)}>
+      {soundEnabled ? <Volume2 size={28} /> : <VolumeX size={28} />}
+    </button>
+  );
+}
+src/assets/sounds/
+src/assets/music/bg.mp3
+{
+  "short_name": "As3smi",
+  "name": "اعصسمي - لعبة التحدي الجماعية",
+  "icons": [
+    {
+      "src": "/logo192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#ff0000",
+  "orientation": "portrait"
+}
+self.addEventListener("install", () => {
+  console.log("Service Worker Installed ✅");
+});
+self.addEventListener("fetch", () => {});
+{
+  "build": {
+    "env": {},
+    "command": "npm run build",
+    "outputDirectory": "dist"
+  }
+}
